@@ -1,1 +1,3 @@
-# go-plugin-hashi-exampe
+# go-plugin-hashi-example
+
+Hashicorp Nomad plugins used outside nomad POC.
