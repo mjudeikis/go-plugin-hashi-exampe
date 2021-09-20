@@ -1,0 +1,1 @@
+# go-plugin-hashi-exampe
