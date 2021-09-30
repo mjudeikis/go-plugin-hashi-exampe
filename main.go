@@ -59,10 +59,15 @@ type DriverHarness struct {
 func main() {
 	ctx := context.Background()
 
+	file, err := os.OpenFile("/tmp/hashilogs", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	logger := hclog.NewInterceptLogger(&hclog.LoggerOptions{
 		Name:       "agent",
 		Level:      hclog.LevelFromString("debug"),
-		Output:     os.Stdout,
+		Output:     file,
 		JSONFormat: true,
 	})
 
@@ -80,7 +85,6 @@ func main() {
 		AllowedProtocols: []plugin.Protocol{
 			plugin.ProtocolGRPC,
 		},
-
 		Cmd: exec.Command("./plugins/docker"),
 	})
 	defer client.Kill()
@@ -127,7 +131,7 @@ func main() {
 
 	task.EncodeConcreteDriverConfig(&taskCfg)
 
-	th, _, err := dClient.StartTask(task)
+	_, _, err = dClient.StartTask(task)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -137,14 +141,50 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
+		err = dClient.DestroyTask(task.ID, true)
+		if err != nil {
+			log.Fatal(err)
+		}
+
 		time.Sleep(time.Second * 5)
 	}()
 
-	for {
-		spew.Dump(th.State)
+	time.Sleep(time.Second * 5)
 
-		time.Sleep(1 * time.Second)
+	// Task rss usage
+	//tt, err := dClient.TaskStats(ctx, task.ID, time.Second)
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+	//
+	//for elem := range tt {
+	//	spew.Dump(elem)
+	//}
+
+	// plugin info
+	//ff, err := dClient.Fingerprint(ctx)
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+	//
+	//for elem := range ff {
+	//	spew.Dump(elem)
+	//}
+
+	for {
+		status, err := dClient.InspectTask(task.ID)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		spew.Dump(status)
+		time.Sleep(time.Second * 2)
 	}
+
+	//	err = dClient.StopTask(task.ID, time.Second, "SIGINT")
+	//	if err != nil {
+	//		log.Fatal(err)
+	//	}
 
 }
 
